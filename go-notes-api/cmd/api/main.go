@@ -4,8 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	
-
+	"go-notes-api/internal/notes"
 )
 
 func main() {
