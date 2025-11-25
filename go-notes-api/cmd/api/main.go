@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"go-notes-api/internal/notes"
+	"go-notes-api/internal/server"
 )
 
 func main() {
