@@ -16,7 +16,7 @@ func main() {
 	handler := notes.NewHandler(store)
 
 	mux := http.NewServeMux()
-	mux.Handle("/notes/", http.HandlerFunc(handler.HandleNotes)) // Handle /notes/ endpoint
+	mux.Handle("/notes", http.HandlerFunc(handler.HandleNotes)) // Handle /notes/ endpoint
 	mux.Handle("/notes/", http.HandlerFunc(handler.HandleNotesByID)) // Handle /notes/{id} endpoint
 
 	handlerWithMiddleware := server.WithCors(mux, "http://localhost:5173")
