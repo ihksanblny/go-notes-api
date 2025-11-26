@@ -6,7 +6,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['delete'])
+const emit = defineEmits(['delete', 'edit'])
 
 function onDelete() {
   emit('delete', props.note.id)
@@ -35,12 +35,21 @@ function onDelete() {
       </p>
     </div>
 
-    <button
-      class="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-[11px] font-semibold text-rose-600 opacity-0 shadow-sm shadow-rose-100 transition group-hover:opacity-100 hover:bg-rose-500 hover:border-rose-500 hover:text-white active:scale-95"
-      @click="onDelete"
-      title="Hapus"
-    >
-      ✕
-    </button>
+    <div class="flex items-center gap-2 opacity-0 transition group-hover:opacity-100">
+      <button
+        class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50 text-[11px] font-semibold text-indigo-600 shadow-sm shadow-indigo-100 transition hover:bg-indigo-500 hover:border-indigo-500 hover:text-white active:scale-95"
+        @click="$emit('edit', note)"
+        title="Edit"
+      >
+        ✎
+      </button>
+      <button
+        class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-[11px] font-semibold text-rose-600 shadow-sm shadow-rose-100 transition hover:bg-rose-500 hover:border-rose-500 hover:text-white active:scale-95"
+        @click="onDelete"
+        title="Hapus"
+      >
+        ✕
+      </button>
+    </div>
   </li>
 </template>

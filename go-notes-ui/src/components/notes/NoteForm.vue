@@ -1,19 +1,53 @@
 <script setup>
 import { ref } from 'vue'
 
-const emit = defineEmits(['create-note'])
+const props = defineProps({
+  noteToEdit: {
+    type: Object,
+    default: null,
+  },
+})
+
+const emit = defineEmits(['create-note', 'update-note', 'cancel-edit'])
 
 const title = ref('')
 const content = ref('')
 
-function onSubmit() {
-  emit('create-note', {
-    title: title.value,
-    content: content.value,
-  })
+import { watch } from 'vue'
 
-  title.value = ''
-  content.value = ''
+watch(
+  () => props.noteToEdit,
+  (newVal) => {
+    if (newVal) {
+      title.value = newVal.title
+      content.value = newVal.content
+    } else {
+      title.value = ''
+      content.value = ''
+    }
+  },
+  { immediate: true }
+)
+
+function onSubmit() {
+  if (props.noteToEdit) {
+    emit('update-note', {
+      id: props.noteToEdit.id,
+      title: title.value,
+      content: content.value,
+    })
+  } else {
+    emit('create-note', {
+      title: title.value,
+      content: content.value,
+    })
+    title.value = ''
+    content.value = ''
+  }
+}
+
+function onCancel() {
+  emit('cancel-edit')
 }
 </script>
 
@@ -22,7 +56,7 @@ function onSubmit() {
     class="rounded-2xl border border-slate-200 bg-white/95 shadow-lg shadow-slate-200/70 px-4 py-4 sm:px-5 sm:py-5"
   >
     <h2 class="mb-3 text-sm font-semibold text-slate-900">
-      Buat Note
+      {{ noteToEdit ? 'Edit Note' : 'Buat Note' }}
     </h2>
 
     <form @submit.prevent="onSubmit" class="space-y-3">
@@ -54,13 +88,23 @@ function onSubmit() {
         <span class="text-[11px] text-slate-400">
           Tip: pakai kata kerja aktif untuk judul.
         </span>
-        <button
-          type="submit"
-          class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-1.5 text-xs font-semibold text-white shadow-md shadow-indigo-300/70 transition hover:shadow-lg hover:shadow-indigo-300/90 hover:brightness-110 active:scale-[0.97]"
-        >
-          <span class="text-base leading-none">+</span>
-          Tambah Note
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            v-if="noteToEdit"
+            type="button"
+            @click="onCancel"
+            class="text-xs font-medium text-slate-500 hover:text-slate-700"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-1.5 text-xs font-semibold text-white shadow-md shadow-indigo-300/70 transition hover:shadow-lg hover:shadow-indigo-300/90 hover:brightness-110 active:scale-[0.97]"
+          >
+            <span v-if="!noteToEdit" class="text-base leading-none">+</span>
+            {{ noteToEdit ? 'Update' : 'Tambah Note' }}
+          </button>
+        </div>
       </div>
     </form>
   </section>

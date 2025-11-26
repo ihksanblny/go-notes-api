@@ -12,7 +12,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['delete-note'])
+const emit = defineEmits(['delete-note', 'edit-note'])
 
 function handleDelete(id) {
   emit('delete-note', id)
@@ -37,6 +37,7 @@ function handleDelete(id) {
         :key="note.id"
         :note="note"
         @delete="handleDelete"
+        @edit="$emit('edit-note', $event)"
       />
     </ul>
   </div>

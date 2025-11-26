@@ -1,12 +1,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getNotes, createNote, deleteNote } from '../../api/notes'
+import { getNotes, createNote, deleteNote, updateNote } from '../../api/notes'
 import NoteForm from './NoteForm.vue'
 import NotesList from './NotesList.vue'
 
 const notes = ref([])
 const loading = ref(false)
 const error = ref('')
+const editingNote = ref(null)
 
 async function loadNotes() {
   loading.value = true
@@ -43,8 +44,40 @@ async function handleDeleteNote(id) {
     error.value = ''
     await deleteNote(id)
     notes.value = notes.value.filter((n) => n.id !== id)
+    if (editingNote.value && editingNote.value.id === id) {
+      editingNote.value = null
+    }
   } catch (err) {
     error.value = err.message || 'Gagal menghapus note'
+  }
+}
+
+function handleEditNote(note) {
+  editingNote.value = note
+  error.value = ''
+}
+
+function handleCancelEdit() {
+  editingNote.value = null
+  error.value = ''
+}
+
+async function handleUpdateNote({ id, title, content }) {
+  if (!title.trim()) {
+    error.value = 'Title wajib diisi'
+    return
+  }
+
+  try {
+    error.value = ''
+    const updated = await updateNote(id, { title, content })
+    const index = notes.value.findIndex((n) => n.id === id)
+    if (index !== -1) {
+      notes.value[index] = updated
+    }
+    editingNote.value = null
+  } catch (err) {
+    error.value = err.message || 'Gagal mengupdate note'
   }
 }
 
@@ -99,7 +132,12 @@ onMounted(loadNotes)
         class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.25fr)] items-start"
       >
         <!-- Form kiri -->
-        <NoteForm @create-note="handleCreateNote" />
+        <NoteForm
+          :note-to-edit="editingNote"
+          @create-note="handleCreateNote"
+          @update-note="handleUpdateNote"
+          @cancel-edit="handleCancelEdit"
+        />
 
         <!-- List kanan -->
         <section
@@ -118,6 +156,7 @@ onMounted(loadNotes)
             :notes="notes"
             :loading="loading"
             @delete-note="handleDeleteNote"
+            @edit-note="handleEditNote"
           />
         </section>
       </div>
