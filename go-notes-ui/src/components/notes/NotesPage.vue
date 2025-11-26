@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { getNotes, createNote, deleteNote, updateNote } from '../../api/notes'
 import NoteForm from './NoteForm.vue'
 import NotesList from './NotesList.vue'
@@ -9,15 +9,53 @@ const loading = ref(false)
 const error = ref('')
 const editingNote = ref(null)
 
+// Pagination & Search State
+const page = ref(1)
+const limit = ref(6) // 6 items per page for grid layout
+const total = ref(0)
+const searchQuery = ref('')
+const totalPages = ref(1)
+
+// Debounce search
+let searchTimeout = null
+
 async function loadNotes() {
   loading.value = true
   error.value = ''
   try {
-    notes.value = await getNotes()
+    const res = await getNotes({
+      page: page.value,
+      limit: limit.value,
+      q: searchQuery.value // q = query
+    })
+    
+    // Handle response structure { data: [], total: N, page: N, limit: N }
+    notes.value = res.data || []
+    total.value = res.total || 0
+    totalPages.value = Math.ceil(total.value / limit.value) || 1
+    
   } catch (err) {
     error.value = err.message || 'Terjadi kesalahan'
+    notes.value = []
   } finally {
     loading.value = false
+  }
+}
+
+function handleSearch() {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    page.value = 1 // Reset to first page on new search
+    loadNotes()
+  }, 300)
+}
+
+function changePage(newPage) {
+  if (newPage >= 1 && newPage <= totalPages.value) {
+    page.value = newPage
+    loadNotes()
+    // Scroll to top of list
+    document.getElementById('notes-grid')?.scrollIntoView({ behavior: 'smooth' })
   }
 }
 
@@ -29,8 +67,11 @@ async function handleCreateNote({ title, content }) {
 
   try {
     error.value = ''
-    const created = await createNote({ title, content })
-    notes.value.push(created)
+    await createNote({ title, content })
+    // Reload to show new note (usually on first page)
+    searchQuery.value = ''
+    page.value = 1
+    await loadNotes()
   } catch (err) {
     error.value = err.message || 'Gagal menambah note'
   }
@@ -43,7 +84,7 @@ async function handleDeleteNote(id) {
   try {
     error.value = ''
     await deleteNote(id)
-    notes.value = notes.value.filter((n) => n.id !== id)
+    await loadNotes() // Reload to update list & pagination
     if (editingNote.value && editingNote.value.id === id) {
       editingNote.value = null
     }
@@ -55,6 +96,8 @@ async function handleDeleteNote(id) {
 function handleEditNote(note) {
   editingNote.value = note
   error.value = ''
+  // Scroll to form
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function handleCancelEdit() {
@@ -70,11 +113,8 @@ async function handleUpdateNote({ id, title, content }) {
 
   try {
     error.value = ''
-    const updated = await updateNote(id, { title, content })
-    const index = notes.value.findIndex((n) => n.id === id)
-    if (index !== -1) {
-      notes.value[index] = updated
-    }
+    await updateNote(id, { title, content })
+    await loadNotes() // Reload to show updated data
     editingNote.value = null
   } catch (err) {
     error.value = err.message || 'Gagal mengupdate note'
@@ -146,15 +186,29 @@ onMounted(loadNotes)
           />
         </section>
 
-        <!-- Notes Grid -->
-        <section>
-          <div class="flex items-center justify-between mb-6 px-2">
+        <!-- Notes Grid & Search -->
+        <section id="notes-grid">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 px-2">
             <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
               Your Notes
               <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
-                {{ notes.length }}
+                {{ total }}
               </span>
             </h2>
+
+            <!-- Search Bar -->
+            <div class="relative w-full sm:w-64">
+              <input
+                v-model="searchQuery"
+                @input="handleSearch"
+                type="text"
+                placeholder="Search notes..."
+                class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-primary-100 focus:border-primary-400 outline-none transition-all"
+              />
+              <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
           </div>
 
           <NotesList
@@ -163,6 +217,33 @@ onMounted(loadNotes)
             @delete-note="handleDeleteNote"
             @edit-note="handleEditNote"
           />
+
+          <!-- Pagination Controls -->
+          <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-8">
+            <button
+              @click="changePage(page - 1)"
+              :disabled="page === 1"
+              class="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            
+            <span class="text-sm font-medium text-slate-600 px-2">
+              Page {{ page }} of {{ totalPages }}
+            </span>
+
+            <button
+              @click="changePage(page + 1)"
+              :disabled="page === totalPages"
+              class="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </section>
       </main>
     </div>

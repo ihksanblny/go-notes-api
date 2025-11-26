@@ -1,7 +1,10 @@
 const API_URL = 'http://localhost:8080'
 
-export async function getNotes() {
-  const res = await fetch(`${API_URL}/notes`)
+export async function getNotes(params = {}) {
+  const query = new URLSearchParams(params).toString()
+  const url = query ? `${API_URL}/notes?${query}` : `${API_URL}/notes`
+  
+  const res = await fetch(url)
   if (!res.ok) {
     throw new Error('Gagal mengambil notes')
   }
