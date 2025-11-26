@@ -1,7 +1,7 @@
-<script setup></script>
+<script setup>
+import NotesPage from './components/notes/NotesPage.vue'
+</script>
 
 <template>
-  <h1 class="text-4xl font-bold text-blue-600">Tailwind OK!</h1>
+  <NotesPage />
 </template>
-
-<style scoped></style>
