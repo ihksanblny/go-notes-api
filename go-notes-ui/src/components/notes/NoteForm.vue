@@ -52,60 +52,68 @@ function onCancel() {
 </script>
 
 <template>
-  <section
-    class="rounded-2xl border border-slate-200 bg-white/95 shadow-lg shadow-slate-200/70 px-4 py-4 sm:px-5 sm:py-5"
-  >
-    <h2 class="mb-3 text-sm font-semibold text-slate-900">
-      {{ noteToEdit ? 'Edit Note' : 'Buat Note' }}
-    </h2>
+  <div class="group relative">
+    <!-- Glow effect behind -->
+    <div class="absolute -inset-1 bg-gradient-to-r from-primary-200 to-indigo-200 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-500"></div>
+    
+    <section class="relative bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+      <div class="p-1">
+        <form @submit.prevent="onSubmit">
+          <!-- Title Input -->
+          <div class="relative">
+            <input
+              v-model="title"
+              type="text"
+              placeholder="What's on your mind?"
+              class="w-full px-5 py-4 text-lg font-semibold text-slate-800 placeholder:text-slate-400 bg-transparent border-none outline-none focus:ring-0"
+            />
+          </div>
 
-    <form @submit.prevent="onSubmit" class="space-y-3">
-      <div class="space-y-1.5">
-        <label class="block text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
-          Title
-        </label>
-        <input
-          v-model="title"
-          type="text"
-          placeholder="Misal: Clean Code, Keamanan…"
-          class="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
-        />
-      </div>
+          <!-- Content Textarea -->
+          <div class="relative px-5 pb-2">
+            <textarea
+              v-model="content"
+              rows="2"
+              placeholder="Add some details..."
+              class="w-full text-slate-600 placeholder:text-slate-400 bg-transparent border-none outline-none focus:ring-0 resize-none text-sm leading-relaxed"
+            ></textarea>
+          </div>
 
-      <div class="space-y-1.5">
-        <label class="block text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
-          Content
-        </label>
-        <textarea
-          v-model="content"
-          rows="3"
-          placeholder="Deskripsi singkat (opsional)…"
-          class="block w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100"
-        ></textarea>
-      </div>
+          <!-- Footer / Actions -->
+          <div class="flex items-center justify-between px-4 py-3 bg-slate-50/50 border-t border-slate-100">
+            <div class="flex items-center gap-2">
+              <span v-if="noteToEdit" class="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded-md">
+                Editing #{{ noteToEdit.id }}
+              </span>
+            </div>
 
-      <div class="flex justify-between items-center pt-1">
-        <span class="text-[11px] text-slate-400">
-          Tip: pakai kata kerja aktif untuk judul.
-        </span>
-        <div class="flex items-center gap-2">
-          <button
-            v-if="noteToEdit"
-            type="button"
-            @click="onCancel"
-            class="text-xs font-medium text-slate-500 hover:text-slate-700"
-          >
-            Batal
-          </button>
-          <button
-            type="submit"
-            class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-1.5 text-xs font-semibold text-white shadow-md shadow-indigo-300/70 transition hover:shadow-lg hover:shadow-indigo-300/90 hover:brightness-110 active:scale-[0.97]"
-          >
-            <span v-if="!noteToEdit" class="text-base leading-none">+</span>
-            {{ noteToEdit ? 'Update' : 'Tambah Note' }}
-          </button>
-        </div>
+            <div class="flex items-center gap-3">
+              <button
+                v-if="noteToEdit"
+                type="button"
+                @click="onCancel"
+                class="text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              
+              <button
+                type="submit"
+                :disabled="!title.trim()"
+                class="inline-flex items-center gap-2 px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-xl transition-all shadow-lg shadow-slate-900/20 hover:shadow-slate-900/30 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span>{{ noteToEdit ? 'Update Note' : 'Create Note' }}</span>
+                <svg v-if="!noteToEdit" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
-    </form>
-  </section>
+    </section>
+  </div>
 </template>
