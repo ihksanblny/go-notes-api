@@ -11,6 +11,14 @@ const emit = defineEmits(['delete', 'edit'])
 function onDelete() {
   emit('delete', props.note.id)
 }
+
+function formatDate(dateString) {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleString('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
 </script>
 
 <template>
@@ -33,6 +41,11 @@ function onDelete() {
       >
         Tidak ada konten.
       </p>
+    <div class="mt-2 flex items-center gap-2 text-[10px] text-slate-400">
+       <span v-if="note.created_at">
+        Dibuat: {{ formatDate(note.created_at) }}
+      </span>
+    </div>
     </div>
 
     <div class="flex items-center gap-2 opacity-0 transition group-hover:opacity-100">

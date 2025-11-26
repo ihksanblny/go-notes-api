@@ -2,6 +2,7 @@ package notes
 
 import (
 	"sync"
+	"time"
 )
 
 type Store interface {
@@ -51,10 +52,14 @@ func (s *InMemoryStore) Create(title, content string) Note {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	now := time.Now()
+
 	note := Note{
 		ID: s.nextID,
 		Title: title,
 		Content: content,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 	s.nextID++
 	s.notes = append(s.notes, note)
@@ -69,6 +74,7 @@ func (s *InMemoryStore) Update(id int, title, content string) (Note, bool) {
 		if n.ID == id {
 			n.Title = title
 			n.Content = content
+			n.UpdatedAt = time.Now()
 			s.notes[i] = n
 			return n, true
 		}

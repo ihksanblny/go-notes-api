@@ -91,7 +91,7 @@ func (h *Handler) handleCreateNote(w http.ResponseWriter, r *http.Request) {
 	title := strings.TrimSpace(input.Title)
 	content := strings.TrimSpace(input.Content)
 
-	if err := ValidateNoteInput(title); err != nil {
+	if err := ValidateNoteInput(title, content); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -122,7 +122,7 @@ func (h* Handler) handleUpdateNote(w http.ResponseWriter, r *http.Request, id in
 	title := strings.TrimSpace(input.Title)
 	content := strings.TrimSpace(input.Content)
 
-	if err := ValidateNoteInput(title); err != nil {
+	if err := ValidateNoteInput(title, content); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}

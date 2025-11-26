@@ -1,7 +1,7 @@
 <script setup>
 import NoteItem from './NoteItem.vue'
 
-const props = defineProps({
+defineProps({
   notes: {
     type: Array,
     required: true,

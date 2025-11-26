@@ -1,6 +1,10 @@
 package server
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+	"time"
+)
 
 func WithCors(next http.Handler, allowedOrigin string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -16,5 +20,16 @@ func WithCors(next http.Handler, allowedOrigin string) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+func WithLogging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
+		start := time.Now()
+		log.Printf("Started %s %s", r.Method, r.URL.Path)
+
+		next.ServeHTTP(w, r)
+
+		log.Printf("Completed %s %s in %v", r.Method, r.URL.Path, time.Since(start))
 	})
 }
