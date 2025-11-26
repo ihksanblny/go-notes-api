@@ -3,99 +3,17 @@ package notes
 import (
 	"database/sql"
 	"log"
-	"sync"
+	"strings"
 	"time"
 )
 
 type Store interface {
 	List() []Note
+	ListPage(page, limit int, query string) ([]Note, int)
 	Get(id int) (Note, bool)
 	Create(title, content string) Note
 	Update(id int, title, content string) (Note, bool)
 	Delete(id int) bool
-}
-
-// ---- InMemoryStore ----
-type InMemoryStore struct {
-	mu     sync.RWMutex
-	notes  []Note
-	nextID int
-}
-
-func NewInMemoryStore() *InMemoryStore {
-	return &InMemoryStore{
-		notes:  []Note{},
-		nextID: 1,
-	}
-}
-
-func (s *InMemoryStore) List() []Note {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	// Return a copy to prevent external modification
-	result := make([]Note, len(s.notes))
-	copy(result, s.notes)
-	return result
-}
-
-func (s *InMemoryStore) Get(id int) (Note, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	for _, n := range s.notes {
-		if n.ID == id {
-			return n, true
-		}
-	}
-	return Note{}, false
-}
-
-func (s *InMemoryStore) Create(title, content string) Note {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	now := time.Now()
-
-	note := Note{
-		ID:        s.nextID,
-		Title:     title,
-		Content:   content,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-	s.nextID++
-	s.notes = append(s.notes, note)
-	return note
-}
-
-func (s *InMemoryStore) Update(id int, title, content string) (Note, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for i, n := range s.notes {
-		if n.ID == id {
-			n.Title = title
-			n.Content = content
-			n.UpdatedAt = time.Now()
-			s.notes[i] = n
-			return n, true
-		}
-	}
-	return Note{}, false
-}
-
-func (s *InMemoryStore) Delete(id int) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for i, n := range s.notes {
-		if n.ID == id {
-			s.notes = append(s.notes[:i], s.notes[i+1:]...)
-			return true
-		}
-	}
-	return false
 }
 
 // ---SqLite store
@@ -143,6 +61,83 @@ func (s *SQLiteStore) List() []Note {
 		log.Printf("Rows error: %v", err)
 	}
 	return result
+}
+
+func (s* SQLiteStore) ListPage(page, limit int, query string) ([]Note, int) {
+	if page < 1 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	query = strings.TrimSpace(query)
+
+	//-- Hitung Total
+	var total int
+	baseCount := `SELECT COUNT(*) FROM notes`
+	var countArgs []interface{}
+
+	if query != "" {
+		baseCount += ` WHERE title LIKE ? OR content LIKE ?`
+		like := "%" + query + "%"
+		countArgs = append(countArgs, like, like)
+	}
+	
+	if err := s.db.QueryRow(baseCount, countArgs...).Scan(&total); err != nil {
+		log.Printf("Count notes error: %v", err)
+		return []Note{}, 0
+	}
+	if total == 0 {
+		return []Note{}, 0
+	}
+
+	//-- ambil data page --
+	offset := (page - 1) * limit
+
+	baseSelect := `SELECT id, title, content, created_at, updated_at FROM notes`
+	var selectArgs []interface{}
+
+	if query != "" {
+		baseSelect += ` WHERE title LIKE ? OR content LIKE ?`
+		like := "%" + query + "%"
+		selectArgs = append(selectArgs, like, like)
+	}
+
+	baseSelect += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`
+	
+	selectArgs = append(selectArgs, limit, offset)
+	
+	rows, err := s.db.Query(baseSelect, selectArgs...)
+	if err != nil {
+		log.Printf("ListPage query error: %v", err)
+		return []Note{}, total
+	}
+	defer rows.Close()
+
+	var result []Note
+	for rows.Next() {
+		var n Note
+		if err := rows.Scan(
+			&n.ID,
+			&n.Title,
+			&n.Content,
+			&n.CreatedAt,
+			&n.UpdatedAt,
+		); err != nil {
+			log.Printf("Scan Note error: %v", err)
+			continue
+		}
+		result = append(result, n)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("Rows error: %v", err)
+	}
+	return result, total
+
 }
 
 func (s *SQLiteStore) Get(id int) (Note, bool) {

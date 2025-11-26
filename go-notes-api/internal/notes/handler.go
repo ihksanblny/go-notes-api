@@ -74,8 +74,40 @@ func (h *Handler) HandleNotesByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleListNotes(w http.ResponseWriter, r *http.Request) {
-	notes := h.store.List()
-	writeJSON(w, http.StatusOK, notes)
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	pageStr := strings.TrimSpace(r.URL.Query().Get("page"))
+	limitStr := strings.TrimSpace(r.URL.Query().Get("limit"))
+
+	// Kalau semua kosong -> fallback ke List() lama
+	if q == "" && pageStr == "" && limitStr == "" {
+		notes := h.store.List()
+		writeJSON(w, http.StatusOK, notes)
+		return
+	}
+
+	page := 1
+	limit := 10
+
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	items, total := h.store.ListPage(page, limit, q)
+
+	resp := map[string]interface{} {
+		"data": items,
+		"total": total,
+		"page": page,
+		"limit": limit,
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) handleCreateNote(w http.ResponseWriter, r *http.Request) {
