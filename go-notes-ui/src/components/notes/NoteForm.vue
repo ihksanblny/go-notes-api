@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   noteToEdit: {
@@ -12,8 +12,6 @@ const emit = defineEmits(['create-note', 'update-note', 'cancel-edit'])
 
 const title = ref('')
 const content = ref('')
-
-import { watch } from 'vue'
 
 watch(
   () => props.noteToEdit,

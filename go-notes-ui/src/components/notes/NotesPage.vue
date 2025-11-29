@@ -26,7 +26,7 @@ async function loadNotes() {
     const res = await getNotes({
       page: page.value,
       limit: limit.value,
-      q: searchQuery.value // q = query
+      q: searchQuery.value
     })
     
     // Handle response structure { data: [], total: N, page: N, limit: N }
@@ -125,38 +125,33 @@ onMounted(loadNotes)
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 font-sans selection:bg-primary-100 selection:text-primary-900">
-    <!-- Top Decoration -->
-    <div class="fixed inset-0 pointer-events-none overflow-hidden">
-      <div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary-200/20 blur-3xl"></div>
-      <div class="absolute top-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-indigo-200/20 blur-3xl"></div>
-    </div>
-
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <!-- Header -->
-      <header class="flex flex-col items-center text-center mb-12 space-y-4">
-        <div class="inline-flex items-center justify-center p-2 bg-white rounded-2xl shadow-sm border border-slate-100 mb-2">
-          <span class="text-2xl">⚡</span>
+  <div class="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-primary-100 selection:text-primary-900">
+    
+    <!-- Navbar / Header -->
+    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="bg-primary-600 text-white p-1.5 rounded-lg">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <h1 class="font-display font-bold text-xl tracking-tight text-slate-900">
+            SuperNotes
+          </h1>
         </div>
-        <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900">
-          Super <span class="text-primary-600">Notes</span>
-        </h1>
-        <p class="max-w-lg text-lg text-slate-600">
-          Capture your ideas instantly. Simple, fast, and beautiful.
-        </p>
-        
-        <!-- Status Indicator -->
-        <div class="flex items-center gap-2 mt-2">
-          <span class="relative flex h-2.5 w-2.5">
-            <span v-if="loading" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-            <span :class="loading ? 'bg-amber-500' : 'bg-emerald-500'" class="relative inline-flex rounded-full h-2.5 w-2.5"></span>
-          </span>
-          <span class="text-xs font-medium text-slate-500 uppercase tracking-wider">
-            {{ loading ? 'Syncing...' : 'All Systems Go' }}
-          </span>
-        </div>
-      </header>
 
+        <div class="flex items-center gap-4">
+          <div class="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
+            <span class="w-2 h-2 rounded-full" :class="loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'"></span>
+            {{ loading ? 'Syncing...' : 'All saved' }}
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      
       <!-- Error Toast -->
       <transition
         enter-active-class="transition duration-300 ease-out"
@@ -166,7 +161,7 @@ onMounted(loadNotes)
         leave-from-class="transform translate-y-0 opacity-100"
         leave-to-class="transform -translate-y-2 opacity-0"
       >
-        <div v-if="error" class="max-w-md mx-auto mb-8 p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-700 shadow-sm">
+        <div v-if="error" class="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-700 shadow-sm">
           <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -174,78 +169,94 @@ onMounted(loadNotes)
         </div>
       </transition>
 
-      <!-- Main Content -->
-      <main class="max-w-3xl mx-auto space-y-12">
-        <!-- Input Area -->
-        <section class="relative z-10">
+      <div class="grid lg:grid-cols-[380px_1fr] gap-8 lg:gap-12 items-start">
+        
+        <!-- Left Column: Create Note -->
+        <aside class="lg:sticky lg:top-24 space-y-8">
+          <div class="space-y-2">
+            <h2 class="font-display font-bold text-3xl text-slate-900 leading-tight">
+              Capture your <br/>
+              <span class="text-primary-600">best ideas.</span>
+            </h2>
+            <p class="text-slate-500 text-lg">
+              Simple, fast, and distraction-free note taking.
+            </p>
+          </div>
+
           <NoteForm
             :note-to-edit="editingNote"
             @create-note="handleCreateNote"
             @update-note="handleUpdateNote"
             @cancel-edit="handleCancelEdit"
           />
-        </section>
+        </aside>
 
-        <!-- Notes Grid & Search -->
-        <section id="notes-grid">
-          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 px-2">
-            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-              Your Notes
-              <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
-                {{ total }}
-              </span>
-            </h2>
-
-            <!-- Search Bar -->
-            <div class="relative w-full sm:w-64">
-              <input
-                v-model="searchQuery"
-                @input="handleSearch"
-                type="text"
-                placeholder="Search notes..."
-                class="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-primary-100 focus:border-primary-400 outline-none transition-all"
-              />
-              <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <!-- Right Column: Notes List -->
+        <main class="space-y-6">
+          <!-- Search & Filter Bar -->
+          <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-2">
+            <div class="pl-3 text-slate-400">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
+            <input
+              v-model="searchQuery"
+              @input="handleSearch"
+              type="text"
+              placeholder="Search your notes..."
+              class="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 placeholder:text-slate-400 focus:ring-0 py-2.5"
+            />
+            <div class="pr-2">
+              <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+                {{ total }} NOTES
+              </span>
+            </div>
           </div>
 
-          <NotesList
-            :notes="notes"
-            :loading="loading"
-            @delete-note="handleDeleteNote"
-            @edit-note="handleEditNote"
-          />
+          <!-- Notes Grid -->
+          <div id="notes-grid" class="min-h-[400px]">
+             <NotesList
+              :notes="notes"
+              :loading="loading"
+              @delete-note="handleDeleteNote"
+              @edit-note="handleEditNote"
+            />
+          </div>
 
-          <!-- Pagination Controls -->
-          <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-8">
+          <!-- Pagination -->
+          <div v-if="totalPages > 1" class="flex items-center justify-center gap-4 pt-4">
             <button
               @click="changePage(page - 1)"
               :disabled="page === 1"
-              class="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              class="group flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-sm font-medium text-slate-600 hover:border-primary-200 hover:text-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
+              Prev
             </button>
             
-            <span class="text-sm font-medium text-slate-600 px-2">
-              Page {{ page }} of {{ totalPages }}
-            </span>
+            <div class="flex items-center gap-1">
+              <span class="text-sm font-medium text-slate-400">Page</span>
+              <span class="text-sm font-bold text-slate-900">{{ page }}</span>
+              <span class="text-sm font-medium text-slate-400">of {{ totalPages }}</span>
+            </div>
 
             <button
               @click="changePage(page + 1)"
               :disabled="page === totalPages"
-              class="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              class="group flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-sm font-medium text-slate-600 hover:border-primary-200 hover:text-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              Next
+              <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </div>
-        </section>
-      </main>
+
+        </main>
+      </div>
     </div>
   </div>
 </template>

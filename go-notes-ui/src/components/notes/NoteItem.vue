@@ -23,23 +23,18 @@ function formatDate(dateString) {
 
 <template>
   <li
-    class="group relative flex flex-col justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm border border-slate-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/50"
+    class="group relative flex flex-col justify-between h-full bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm hover:shadow-md hover:border-primary-200 transition-all duration-300 hover:-translate-y-1"
   >
-    <!-- Top Accent (Random color simulation based on ID parity for now, or just a gradient) -->
-    <div 
-      class="absolute top-0 left-0 right-0 h-1.5 rounded-t-2xl bg-gradient-to-r from-primary-400 to-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity"
-    ></div>
-
-    <div class="space-y-2">
+    <div class="space-y-3">
       <div class="flex items-start justify-between gap-2">
-        <h3 class="font-bold text-lg text-slate-800 leading-tight group-hover:text-primary-600 transition-colors">
+        <h3 class="font-display font-bold text-lg text-slate-900 leading-tight line-clamp-2 group-hover:text-primary-600 transition-colors">
           {{ note.title }}
         </h3>
       </div>
       
       <p
         v-if="note.content"
-        class="text-sm leading-relaxed text-slate-600 line-clamp-4"
+        class="text-sm text-slate-500 leading-relaxed line-clamp-3"
       >
         {{ note.content }}
       </p>
@@ -51,15 +46,15 @@ function formatDate(dateString) {
       </p>
     </div>
 
-    <div class="flex items-center justify-between pt-2 border-t border-slate-50 mt-2">
-      <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+    <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+      <span class="text-xs font-medium text-slate-400">
         {{ formatDate(note.created_at) }}
       </span>
 
-      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0">
+      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button
-          class="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
           @click="$emit('edit', note)"
+          class="p-2 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
           title="Edit"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -67,8 +62,8 @@ function formatDate(dateString) {
           </svg>
         </button>
         <button
-          class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
           @click="onDelete"
+          class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
           title="Delete"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
