@@ -18,6 +18,7 @@ var (
 	ErrTitleRequired = errors.New("title is required")
 	ErrTitleTooLong = errors.New("title must be less than 100 characters")
 	ErrContentTooLong = errors.New("content must be less than 1000 characters")
+	ErrNoteNotFound = errors.New("note not found")
 	maxTitleLength = 100
 	maxContentLength = 1000
 )

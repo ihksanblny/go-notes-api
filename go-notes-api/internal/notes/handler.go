@@ -2,6 +2,7 @@ package notes
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -22,11 +23,13 @@ func writeAPIError(w http.ResponseWriter, status int, code, message string) {
 }
 
 type Handler struct {
-	store Store
+	service *Service
 }
 
 func NewHandler(store Store) *Handler {
-	return &Handler{store: store}
+	return &Handler{
+		service: NewService(store),
+	}
 }
 
 // util response
@@ -36,6 +39,15 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	if data != nil {
 		_ = json.NewEncoder(w).Encode(data)
 	}
+}
+
+func ensureJSON(w http.ResponseWriter, r *http.Request) bool {
+	ct := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(ct, "application/json") {
+		writeAPIError(w, http.StatusUnsupportedMediaType, "UNSUPPORTED_CONTENT_TYPE", "Content-Type must be application/json")
+		return false
+	}
+	return true
 }
 
 // /notes
@@ -58,17 +70,19 @@ func (h *Handler) HandleNotesByID(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+
 	path := strings.TrimPrefix(r.URL.Path, "/notes/")
+	path = strings.TrimSuffix(path, "/")
 
 	// Jika ada slash lagi, maka invalid
 	if strings.Contains(path, "/") || path == "" {
 		writeAPIError(w, http.StatusBadRequest, "INVALID_NOTE_PATH", "path must be /notes/{id}")
 		return
 	}
-	
+
 	id, err := strconv.Atoi(path)
 	if err != nil {
-		writeAPIError(w, http.StatusBadRequest, "INVALID_NOTE_ID", "id must be number")
+		writeAPIError(w, http.StatusBadRequest, "INVALID_NOTE_ID", "id must be a valid integer")
 		return
 	}
 
@@ -88,7 +102,7 @@ func (h *Handler) handleListNotes(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 
 	page := 1
-	limit := 10
+	limit := 100
 
 	// parse page
 	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
@@ -110,7 +124,11 @@ func (h *Handler) handleListNotes(w http.ResponseWriter, r *http.Request) {
 		limit = l
 	}
 
-	items, total := h.store.ListPage(page, limit, q)
+	items, total, err := h.service.ListNotes(r.Context(), q, page, limit)
+	if err != nil {
+		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list notes")
+		return
+	}
 
 	resp := map[string]interface{}{
 		"data":  items,
@@ -122,10 +140,15 @@ func (h *Handler) handleListNotes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleCreateNote(w http.ResponseWriter, r *http.Request) {
+	if !ensureJSON(w, r) {
+		return
+	}
+
 	var input struct {
 		Title   string `json:"title"`
 		Content string `json:"content"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeAPIError(w, http.StatusBadRequest, "INVALID_REQUEST_BODY", "invalid request body")
 		return
@@ -134,24 +157,33 @@ func (h *Handler) handleCreateNote(w http.ResponseWriter, r *http.Request) {
 	title := strings.TrimSpace(input.Title)
 	content := strings.TrimSpace(input.Content)
 
-	if err := ValidateNoteInput(title, content); err != nil {
+	note, err := h.service.CreateNote(r.Context(), title, content)
+	if err != nil {
 		writeAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 		return
 	}
-	note := h.store.Create(title, content)
+
 	writeJSON(w, http.StatusCreated, note)
 }
 
 func (h *Handler) handleGetNote(w http.ResponseWriter, r *http.Request, id int) {
-	note, ok := h.store.Get(id)
-	if !ok {
-		writeAPIError(w, http.StatusNotFound, "NOT_FOUND", "note not found")
+	note, err := h.service.GetNote(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNoteNotFound) {
+			writeAPIError(w, http.StatusNotFound, "NOT_FOUND", "note not found")
+		} else {
+			writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get note")
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, note)
 }
 
 func (h *Handler) handleUpdateNote(w http.ResponseWriter, r *http.Request, id int) {
+	if !ensureJSON(w, r) {
+		return
+	}
+
 	var input struct {
 		Title   string `json:"title"`
 		Content string `json:"content"`
@@ -165,14 +197,14 @@ func (h *Handler) handleUpdateNote(w http.ResponseWriter, r *http.Request, id in
 	title := strings.TrimSpace(input.Title)
 	content := strings.TrimSpace(input.Content)
 
-	if err := ValidateNoteInput(title, content); err != nil {
-		writeAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
-		return
-	}
-
-	note, ok := h.store.Update(id, title, content)
-	if !ok {
-		writeAPIError(w, http.StatusNotFound, "NOT_FOUND", "note not found")
+	note, err := h.service.UpdateNote(r.Context(), id, title, content)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNoteNotFound):
+			writeAPIError(w, http.StatusNotFound, "NOT_FOUND", "note not found")
+		default:
+			writeAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		}
 		return
 	}
 
@@ -180,9 +212,13 @@ func (h *Handler) handleUpdateNote(w http.ResponseWriter, r *http.Request, id in
 }
 
 func (h *Handler) handleDeleteNote(w http.ResponseWriter, r *http.Request, id int) {
-	ok := h.store.Delete(id)
-	if !ok {
-		writeAPIError(w, http.StatusNotFound, "NOT_FOUND", "note not found")
+	err := h.service.DeleteNote(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNoteNotFound) {
+			writeAPIError(w, http.StatusNotFound, "NOT_FOUND", "note not found")
+		} else {
+			writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to delete note")
+		}
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
