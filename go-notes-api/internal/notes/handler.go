@@ -124,7 +124,10 @@ func (h *Handler) handleListNotes(w http.ResponseWriter, r *http.Request) {
 		limit = l
 	}
 
-	items, total, err := h.service.ListNotes(r.Context(), q, page, limit)
+	sort := r.URL.Query().Get("sort")
+	order := r.URL.Query().Get("order")
+
+	items, total, err := h.service.ListNotes(r.Context(), q, page, limit, sort, order)
 	if err != nil {
 		writeAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list notes")
 		return

@@ -2,6 +2,7 @@ package notes
 
 import (
 	"context"
+	"strings"
 )
 
 type Service struct {
@@ -13,9 +14,26 @@ func NewService(store Store) *Service {
 }
 
 // List Notes mengembalikan notes dengan pagination + search
-func (s *Service) ListNotes(ctx context.Context, q string, page, limit int) ([]Note, int, error) {
+func (s *Service) ListNotes(ctx context.Context, q string, page, limit int, sort, order string) ([]Note, int, error) {
 	// validasi udah dilakuin di handler
-	items, total := s.store.ListPage(page, limit, q)
+	sort = strings.ToLower(strings.TrimSpace(sort))
+	order = strings.ToLower(strings.TrimSpace(order))
+
+	switch sort {
+	case "title", "updated_at", "created_at":
+		//ok
+	default:
+		sort = "created_at" //default
+	}
+
+	switch order {
+	case "asc", "desc":
+		//ok
+	default:
+		order = "desc" //default
+	}
+
+	items, total := s.store.ListPage(page, limit, q, sort, order)
 	return items, total, nil 
 }
 

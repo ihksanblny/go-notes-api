@@ -15,6 +15,20 @@ const limit = ref(6) // 6 items per page for grid layout
 const total = ref(0)
 const searchQuery = ref('')
 const totalPages = ref(1)
+const sortBy = ref('created_at')
+const sortOrder = ref('desc')
+const showSortMenu = ref(false)
+
+const sortOptions = [
+  { label: 'Date', value: 'created_at' },
+  { label: 'Title', value: 'title' }
+]
+
+function selectSort(value) {
+  sortBy.value = value
+  showSortMenu.value = false
+  loadNotes()
+}
 
 // Debounce search
 let searchTimeout = null
@@ -26,7 +40,9 @@ async function loadNotes() {
     const res = await getNotes({
       page: page.value,
       limit: limit.value,
-      q: searchQuery.value
+      q: searchQuery.value,
+      sort: sortBy.value,
+      order: sortOrder.value
     })
     
     // Handle response structure { data: [], total: N, page: N, limit: N }
@@ -48,6 +64,11 @@ function handleSearch() {
     page.value = 1 // Reset to first page on new search
     loadNotes()
   }, 300)
+}
+
+function toggleSortOrder() {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  loadNotes()
 }
 
 function changePage(newPage) {
@@ -193,22 +214,85 @@ onMounted(loadNotes)
 
         <!-- Right Column: Notes List -->
         <main class="space-y-6">
-          <!-- Search & Filter Bar -->
-          <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200/60 flex items-center gap-2">
-            <div class="pl-3 text-slate-400">
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+            <!-- Search & Filter Bar -->
+          <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col sm:flex-row items-center gap-2">
+            <div class="flex-1 flex items-center gap-2 w-full">
+              <div class="pl-3 text-slate-400">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                v-model="searchQuery"
+                @input="handleSearch"
+                type="text"
+                placeholder="Search your notes..."
+                class="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 placeholder:text-slate-400 focus:ring-0 py-2.5"
+              />
             </div>
-            <input
-              v-model="searchQuery"
-              @input="handleSearch"
-              type="text"
-              placeholder="Search your notes..."
-              class="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 placeholder:text-slate-400 focus:ring-0 py-2.5"
-            />
-            <div class="pr-2">
-              <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+            
+            <div class="flex items-center gap-2 w-full sm:w-auto px-2 pb-2 sm:pb-0 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0">
+              
+              <!-- Custom Sort Dropdown -->
+              <div class="relative">
+                <button 
+                  @click="showSortMenu = !showSortMenu"
+                  class="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 px-3 py-2 rounded-xl transition-colors"
+                >
+                  <span>{{ sortOptions.find(o => o.value === sortBy)?.label }}</span>
+                  <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                <!-- Backdrop -->
+                <div v-if="showSortMenu" @click="showSortMenu = false" class="fixed inset-0 z-10"></div>
+
+                <!-- Menu -->
+                <transition
+                  enter-active-class="transition duration-100 ease-out"
+                  enter-from-class="transform scale-95 opacity-0"
+                  enter-to-class="transform scale-100 opacity-100"
+                  leave-active-class="transition duration-75 ease-in"
+                  leave-from-class="transform scale-100 opacity-100"
+                  leave-to-class="transform scale-95 opacity-0"
+                >
+                  <div 
+                    v-if="showSortMenu"
+                    class="absolute right-0 top-full mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-20"
+                  >
+                    <button
+                      v-for="opt in sortOptions"
+                      :key="opt.value"
+                      @click="selectSort(opt.value)"
+                      class="w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-between"
+                      :class="sortBy === opt.value ? 'text-primary-600 bg-primary-50/50' : 'text-slate-600'"
+                    >
+                      {{ opt.label }}
+                      <svg v-if="sortBy === opt.value" class="w-4 h-4 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </transition>
+              </div>
+              
+              <button 
+                @click="toggleSortOrder"
+                class="p-2 rounded-xl text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                :title="sortOrder === 'asc' ? 'Oldest first' : 'Newest first'"
+              >
+                <svg v-if="sortOrder === 'desc'" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h5m4 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+              </button>
+
+              <div class="w-px h-4 bg-slate-200 mx-1"></div>
+
+              <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md whitespace-nowrap">
                 {{ total }} NOTES
               </span>
             </div>

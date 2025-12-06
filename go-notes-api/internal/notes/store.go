@@ -5,11 +5,12 @@ import (
 	"log"
 	"strings"
 	"time"
+	// "golang.org/x/text/cases"
 )
 
 type Store interface {
 	List() []Note
-	ListPage(page, limit int, query string) ([]Note, int)
+	ListPage(page, limit int, query string, sortBy, sortOrder string) ([]Note, int)
 	Get(id int) (Note, bool)
 	Create(title, content string) Note
 	Update(id int, title, content string) (Note, bool)
@@ -63,7 +64,9 @@ func (s *SQLiteStore) List() []Note {
 	return result
 }
 
-func (s* SQLiteStore) ListPage(page, limit int, query string) ([]Note, int) {
+func (s *SQLiteStore) ListPage(page, limit int, query string, sortBy, sortOrder string) ([]Note, int) {
+	log.Printf("ListPage input sortBy=%q sortOrder=%q", sortBy, sortOrder)
+
 	if page < 1 {
 		page = 1
 	}
@@ -76,6 +79,25 @@ func (s* SQLiteStore) ListPage(page, limit int, query string) ([]Note, int) {
 
 	query = strings.TrimSpace(query)
 
+	//-- Tentukan kolom string
+	sortColumn := "created_at" // default
+	switch sortBy {
+	case "title":
+		sortColumn = "title"
+	case "updated_at":
+		sortColumn = "updated_at"
+	case "created_at":
+		sortColumn = "created_at"
+	}
+
+	
+
+	//-- Tentukan urutan
+	sortDir := "DESC" //default
+	if strings.ToLower(sortOrder) == "asc" {
+		sortDir = "ASC"
+	}
+
 	//-- Hitung Total
 	var total int
 	baseCount := `SELECT COUNT(*) FROM notes`
@@ -86,7 +108,7 @@ func (s* SQLiteStore) ListPage(page, limit int, query string) ([]Note, int) {
 		like := "%" + query + "%"
 		countArgs = append(countArgs, like, like)
 	}
-	
+
 	if err := s.db.QueryRow(baseCount, countArgs...).Scan(&total); err != nil {
 		log.Printf("Count notes error: %v", err)
 		return []Note{}, 0
@@ -97,7 +119,6 @@ func (s* SQLiteStore) ListPage(page, limit int, query string) ([]Note, int) {
 
 	//-- ambil data page --
 	offset := (page - 1) * limit
-
 	baseSelect := `SELECT id, title, content, created_at, updated_at FROM notes`
 	var selectArgs []interface{}
 
@@ -107,10 +128,12 @@ func (s* SQLiteStore) ListPage(page, limit int, query string) ([]Note, int) {
 		selectArgs = append(selectArgs, like, like)
 	}
 
-	baseSelect += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`
-	
+	baseSelect += ` ORDER BY ` + sortColumn + ` ` + sortDir + ` LIMIT ? OFFSET ?`
 	selectArgs = append(selectArgs, limit, offset)
-	
+
+	log.Printf("ListPage using ORDER BY %s %s", sortColumn, sortDir)
+	log.Printf("ListPage SQL: %s | args=%v", baseSelect, selectArgs)
+
 	rows, err := s.db.Query(baseSelect, selectArgs...)
 	if err != nil {
 		log.Printf("ListPage query error: %v", err)
