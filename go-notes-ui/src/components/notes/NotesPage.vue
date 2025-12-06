@@ -142,14 +142,32 @@ async function handleUpdateNote({ id, title, content }) {
   }
 }
 
-onMounted(loadNotes)
+const isDark = ref(localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches))
+
+function toggleDarkMode() {
+  isDark.value = !isDark.value
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+    localStorage.setItem('theme', 'dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+    localStorage.setItem('theme', 'light')
+  }
+}
+
+onMounted(() => {
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+  }
+  loadNotes()
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 selection:bg-primary-100 selection:text-primary-900">
+  <div class="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 selection:bg-primary-100 selection:text-primary-900 transition-colors duration-300">
     
     <!-- Navbar / Header -->
-    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/60">
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-800 transition-colors duration-300">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="bg-primary-600 text-white p-1.5 rounded-lg">
@@ -157,13 +175,26 @@ onMounted(loadNotes)
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h1 class="font-display font-bold text-xl tracking-tight text-slate-900">
+          <h1 class="font-display font-bold text-xl tracking-tight text-slate-900 dark:text-white">
             SuperNotes
           </h1>
         </div>
 
         <div class="flex items-center gap-4">
-          <div class="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
+          <button 
+            @click="toggleDarkMode" 
+            class="p-2 rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+            title="Toggle Dark Mode"
+          >
+            <svg v-if="isDark" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+            <svg v-else class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          </button>
+
+          <div class="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full transition-colors duration-300">
             <span class="w-2 h-2 rounded-full" :class="loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'"></span>
             {{ loading ? 'Syncing...' : 'All saved' }}
           </div>
@@ -182,7 +213,7 @@ onMounted(loadNotes)
         leave-from-class="transform translate-y-0 opacity-100"
         leave-to-class="transform -translate-y-2 opacity-0"
       >
-        <div v-if="error" class="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-700 shadow-sm">
+        <div v-if="error" class="mb-6 p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30 rounded-xl flex items-center gap-3 text-rose-700 dark:text-rose-300 shadow-sm">
           <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -195,11 +226,11 @@ onMounted(loadNotes)
         <!-- Left Column: Create Note -->
         <aside class="lg:sticky lg:top-24 space-y-8">
           <div class="space-y-2">
-            <h2 class="font-display font-bold text-3xl text-slate-900 leading-tight">
+            <h2 class="font-display font-bold text-3xl text-slate-900 dark:text-white leading-tight">
               Capture your <br/>
-              <span class="text-primary-600">best ideas.</span>
+              <span class="text-primary-600 dark:text-primary-400">best ideas.</span>
             </h2>
-            <p class="text-slate-500 text-lg">
+            <p class="text-slate-500 dark:text-slate-400 text-lg">
               Simple, fast, and distraction-free note taking.
             </p>
           </div>
@@ -215,9 +246,9 @@ onMounted(loadNotes)
         <!-- Right Column: Notes List -->
         <main class="space-y-6">
             <!-- Search & Filter Bar -->
-          <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200/60 flex flex-col sm:flex-row items-center gap-2">
+          <div class="bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-2 transition-colors duration-300">
             <div class="flex-1 flex items-center gap-2 w-full">
-              <div class="pl-3 text-slate-400">
+              <div class="pl-3 text-slate-400 dark:text-slate-500">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -227,17 +258,17 @@ onMounted(loadNotes)
                 @input="handleSearch"
                 type="text"
                 placeholder="Search your notes..."
-                class="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 placeholder:text-slate-400 focus:ring-0 py-2.5"
+                class="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-0 py-2.5"
               />
             </div>
             
-            <div class="flex items-center gap-2 w-full sm:w-auto px-2 pb-2 sm:pb-0 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0">
+            <div class="flex items-center gap-2 w-full sm:w-auto px-2 pb-2 sm:pb-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800 pt-2 sm:pt-0">
               
               <!-- Custom Sort Dropdown -->
               <div class="relative">
                 <button 
                   @click="showSortMenu = !showSortMenu"
-                  class="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 px-3 py-2 rounded-xl transition-colors"
+                  class="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-xl transition-colors"
                 >
                   <span>{{ sortOptions.find(o => o.value === sortBy)?.label }}</span>
                   <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -259,17 +290,17 @@ onMounted(loadNotes)
                 >
                   <div 
                     v-if="showSortMenu"
-                    class="absolute right-0 top-full mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-20"
+                    class="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-20"
                   >
                     <button
                       v-for="opt in sortOptions"
                       :key="opt.value"
                       @click="selectSort(opt.value)"
-                      class="w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-slate-50 transition-colors flex items-center justify-between"
-                      :class="sortBy === opt.value ? 'text-primary-600 bg-primary-50/50' : 'text-slate-600'"
+                      class="w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-between"
+                      :class="sortBy === opt.value ? 'text-primary-600 dark:text-primary-400 bg-primary-50/50 dark:bg-primary-900/20' : 'text-slate-600 dark:text-slate-300'"
                     >
                       {{ opt.label }}
-                      <svg v-if="sortBy === opt.value" class="w-4 h-4 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg v-if="sortBy === opt.value" class="w-4 h-4 text-primary-600 dark:text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                       </svg>
                     </button>
@@ -279,7 +310,7 @@ onMounted(loadNotes)
               
               <button 
                 @click="toggleSortOrder"
-                class="p-2 rounded-xl text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                class="p-2 rounded-xl text-slate-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 transition-colors"
                 :title="sortOrder === 'asc' ? 'Oldest first' : 'Newest first'"
               >
                 <svg v-if="sortOrder === 'desc'" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -290,9 +321,9 @@ onMounted(loadNotes)
                 </svg>
               </button>
 
-              <div class="w-px h-4 bg-slate-200 mx-1"></div>
+              <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
 
-              <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md whitespace-nowrap">
+              <span class="text-xs font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md whitespace-nowrap">
                 {{ total }} NOTES
               </span>
             </div>
@@ -313,7 +344,7 @@ onMounted(loadNotes)
             <button
               @click="changePage(page - 1)"
               :disabled="page === 1"
-              class="group flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-sm font-medium text-slate-600 hover:border-primary-200 hover:text-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              class="group flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-medium text-slate-600 dark:text-slate-400 hover:border-primary-200 dark:hover:border-primary-700 hover:text-primary-600 dark:hover:text-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <svg class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -323,14 +354,14 @@ onMounted(loadNotes)
             
             <div class="flex items-center gap-1">
               <span class="text-sm font-medium text-slate-400">Page</span>
-              <span class="text-sm font-bold text-slate-900">{{ page }}</span>
+              <span class="text-sm font-bold text-slate-900 dark:text-slate-100">{{ page }}</span>
               <span class="text-sm font-medium text-slate-400">of {{ totalPages }}</span>
             </div>
 
             <button
               @click="changePage(page + 1)"
               :disabled="page === totalPages"
-              class="group flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 text-sm font-medium text-slate-600 hover:border-primary-200 hover:text-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              class="group flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-medium text-slate-600 dark:text-slate-400 hover:border-primary-200 dark:hover:border-primary-700 hover:text-primary-600 dark:hover:text-primary-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               Next
               <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">

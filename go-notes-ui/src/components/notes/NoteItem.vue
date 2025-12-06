@@ -23,38 +23,38 @@ function formatDate(dateString) {
 
 <template>
   <li
-    class="group relative flex flex-col justify-between h-full bg-white rounded-2xl border border-slate-200/60 p-5 shadow-sm hover:shadow-md hover:border-primary-200 transition-all duration-300 hover:-translate-y-1"
+    class="group relative flex flex-col justify-between h-full bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-700 transition-all duration-300 hover:-translate-y-1"
   >
     <div class="space-y-3">
       <div class="flex items-start justify-between gap-2">
-        <h3 class="font-display font-bold text-lg text-slate-900 leading-tight line-clamp-2 group-hover:text-primary-600 transition-colors">
+        <h3 class="font-display font-bold text-lg text-slate-900 dark:text-slate-100 leading-tight line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
           {{ note.title }}
         </h3>
       </div>
       
       <p
         v-if="note.content"
-        class="text-sm text-slate-500 leading-relaxed line-clamp-3"
+        class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-3"
       >
         {{ note.content }}
       </p>
       <p
         v-else
-        class="text-sm italic text-slate-400"
+        class="text-sm italic text-slate-400 dark:text-slate-500"
       >
         No content provided.
       </p>
     </div>
 
-    <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
-      <span class="text-xs font-medium text-slate-400">
+    <div class="mt-5 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+      <span class="text-xs font-medium text-slate-400 dark:text-slate-500">
         {{ formatDate(note.created_at) }}
       </span>
 
       <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <button
           @click="$emit('edit', note)"
-          class="p-2 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+          class="p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
           title="Edit"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -63,7 +63,7 @@ function formatDate(dateString) {
         </button>
         <button
           @click="onDelete"
-          class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+          class="p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors"
           title="Delete"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
