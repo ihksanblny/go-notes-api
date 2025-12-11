@@ -5,7 +5,6 @@ import (
 	"log"
 	"strings"
 	"time"
-	// "golang.org/x/text/cases"
 )
 
 type Store interface {
@@ -34,7 +33,8 @@ func InitSchema(db *sql.DB) error {
 		title TEXT NOT NULL,
 		content TEXT NOT NULL,
 		created_at DATETIME NOT NULL,
-		updated_at DATETIME NOT NULL
+		updated_at DATETIME NOT NULL,
+		deleted_at DATETIME NULL
 	);`
 
 	_, err := db.Exec(query)
@@ -42,7 +42,11 @@ func InitSchema(db *sql.DB) error {
 }
 
 func (s *SQLiteStore) List() []Note {
-	rows, err := s.db.Query(`SELECT id, title, content, created_at, updated_at FROM notes ORDER BY created_at DESC`)
+	rows, err := s.db.Query(`
+		SELECT id, title, content, created_at, updated_at, deleted_at
+		FROM notes
+		WHERE deleted_at IS NULL
+		ORDER BY created_at DESC`)
 	if err != nil {
 		log.Printf("List notes error: %v", err)
 		return []Note{}
@@ -52,7 +56,7 @@ func (s *SQLiteStore) List() []Note {
 	var result []Note
 	for rows.Next() {
 		var n Note
-		if err := rows.Scan(&n.ID, &n.Title, &n.Content, &n.CreatedAt, &n.UpdatedAt); err != nil {
+		if err := rows.Scan(&n.ID, &n.Title, &n.Content, &n.CreatedAt, &n.UpdatedAt, &n.DeletedAt); err != nil {
 			log.Printf("Scan note error: %v", err)
 			continue
 		}
@@ -90,8 +94,6 @@ func (s *SQLiteStore) ListPage(page, limit int, query string, sortBy, sortOrder 
 		sortColumn = "created_at"
 	}
 
-	
-
 	//-- Tentukan urutan
 	sortDir := "DESC" //default
 	if strings.ToLower(sortOrder) == "asc" {
@@ -100,11 +102,11 @@ func (s *SQLiteStore) ListPage(page, limit int, query string, sortBy, sortOrder 
 
 	//-- Hitung Total
 	var total int
-	baseCount := `SELECT COUNT(*) FROM notes`
+	baseCount := `SELECT COUNT(*) FROM notes WHERE deleted_at IS NULL`
 	var countArgs []interface{}
 
 	if query != "" {
-		baseCount += ` WHERE title LIKE ? OR content LIKE ?`
+		baseCount += ` AND (title LIKE ? OR content LIKE ?)`
 		like := "%" + query + "%"
 		countArgs = append(countArgs, like, like)
 	}
@@ -119,11 +121,11 @@ func (s *SQLiteStore) ListPage(page, limit int, query string, sortBy, sortOrder 
 
 	//-- ambil data page --
 	offset := (page - 1) * limit
-	baseSelect := `SELECT id, title, content, created_at, updated_at FROM notes`
+	baseSelect := `SELECT id, title, content, created_at, updated_at, deleted_at FROM notes WHERE deleted_at IS NULL`
 	var selectArgs []interface{}
 
 	if query != "" {
-		baseSelect += ` WHERE title LIKE ? OR content LIKE ?`
+		baseSelect += ` AND (title LIKE ? OR content LIKE ?)`
 		like := "%" + query + "%"
 		selectArgs = append(selectArgs, like, like)
 	}
@@ -150,6 +152,7 @@ func (s *SQLiteStore) ListPage(page, limit int, query string, sortBy, sortOrder 
 			&n.Content,
 			&n.CreatedAt,
 			&n.UpdatedAt,
+			&n.DeletedAt,
 		); err != nil {
 			log.Printf("Scan Note error: %v", err)
 			continue
@@ -165,8 +168,8 @@ func (s *SQLiteStore) ListPage(page, limit int, query string, sortBy, sortOrder 
 
 func (s *SQLiteStore) Get(id int) (Note, bool) {
 	var n Note
-	err := s.db.QueryRow(`SELECT id, title, content, created_at, updated_at FROM notes WHERE id = ?`, id).
-		Scan(&n.ID, &n.Title, &n.Content, &n.CreatedAt, &n.UpdatedAt)
+	err := s.db.QueryRow(`SELECT id, title, content, created_at, updated_at, deleted_at FROM notes WHERE id = ? AND deleted_at IS NULL`, id).
+		Scan(&n.ID, &n.Title, &n.Content, &n.CreatedAt, &n.UpdatedAt, &n.DeletedAt)
 	if err == sql.ErrNoRows {
 		return Note{}, false
 	}
@@ -182,7 +185,7 @@ func (s *SQLiteStore) Create(title string, content string) Note {
 
 	res, err := s.db.Exec(
 		`INSERT INTO notes (title, content, created_at, updated_at) VALUES (?, ?, ?, ?)`,
-		title, content, time.Now(), time.Now(),
+		title, content, now, now,
 	)
 	if err != nil {
 		log.Printf("Create note error: %v", err)
@@ -208,7 +211,7 @@ func (s *SQLiteStore) Update(id int, title string, content string) (Note, bool) 
 	now := time.Now()
 
 	res, err := s.db.Exec(
-		`UPDATE notes SET title = ?, content = ?, updated_at = ? WHERE id = ?`,
+		`UPDATE notes SET title = ?, content = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL`,
 		title, content, now, id,
 	)
 	if err != nil {
@@ -225,7 +228,11 @@ func (s *SQLiteStore) Update(id int, title string, content string) (Note, bool) 
 }
 
 func (s *SQLiteStore) Delete(id int) bool {
-	res, err := s.db.Exec(`DELETE FROM notes WHERE id = ?`, id)
+	now := time.Now()
+
+	res, err := s.db.Exec(
+		`UPDATE notes SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`, now, id,
+	)
 	if err != nil {
 		log.Printf("Delete note error: %v", err)
 		return false
